@@ -1,5 +1,6 @@
 #  coding: utf-8 
 import socketserver
+import os
 
 # Copyright 2013 Abram Hindle, Eddie Antonio Santos
 # 
@@ -32,29 +33,51 @@ class MyWebServer(socketserver.BaseRequestHandler):
     def handle(self):
         """
         Processes incoming requests from client
+        Only processes GET requests
         """
         try:
             self.data = self.request.recv(1024).strip().decode()
-            path = self.data.split(' ')[1]
+            print('Got a request: \n' + self.data)
+            if self.data != ' ' or self.data != '':
+                s_data = self.data.split(' ')
+                method, path = s_data[0], s_data[1]
+            
+            if method != 'GET':
+                header = 'HTTP/1.1 405 Method Not Allowed\n'
+            else: 
+                header = 'HTTP/1.1 200 OK\n'
 
-            r = 'HTTP/1.1 404 NOT FOUND\n\nI do not know what you were trying to show, but it does not exist.'
+            root = 'www'
+            r = ''
+
             if path == '/':
                 path = '/index.html'
-                
-            f = open('www' + path)
-            contents = f.read()
-            f.close() 
+            
+            if not path.endswith('/') and not path.endswith('.css') and not path.endswith('.html'):
+                header = 'HTTP/1.1 301 Moved Permanently'
+                r = header + '\nLocation: ' + path + '/'
+            else:            
+                f = open(root + path)
+                contents = f.read()
+                f.close() 
 
-            if path.find('.css'):
-                r = 'HTTP/1.1 200 OK\nContent-Type: text/css\n\n' + contents
-            else: 
-                r = 'HTTP/1.1 200 OK\n\n' + contents 
+                if path.endswith('.css'):
+                    r = header + 'Content-Type: text/css\n\n' + contents
+                elif path.endswith('.html'):
+                    r = header + 'Content-Type: text/html\n\n' + contents
+        except IsADirectoryError:
+            if os.path.isfile(root + path + 'index.html'):
+                f = open(root + path + 'index.html')
+                contents = f.read()
+                f.close()
+                r = header + 'Content-Type: text/html\n\n' + contents
+            else:
+                r = 'HTTP/1.1 404 NOT FOUND\n\nI do not know what you were trying to show, but it does not exist.'
         except FileNotFoundError: 
-            # currently is showing up even if the page shows...
             r = 'HTTP/1.1 404 NOT FOUND\n\nI do not know what you were trying to show, but it does not exist.'
         finally: 
-            self.request.sendall(r.encode('utf-8')) # send the HTML page with CSS styling
-            self.request.close() # close the client connection
+            self.request.sendall(r.encode('utf-8'))
+            self.request.close()
 
         
 if __name__ == "__main__":
@@ -62,9 +85,9 @@ if __name__ == "__main__":
 
     socketserver.TCPServer.allow_reuse_address = True
     # Create the server, binding to localhost on port 8080
-    server = socketserver.TCPServer((HOST, PORT), MyWebServer)
-    print('Webserver running on port %s' % PORT)
+    with socketserver.TCPServer((HOST, PORT), MyWebServer) as server:
+        print('Running on port %s' % PORT)
 
-    # Activate the server; this will keep running until you
-    # interrupt the program with Ctrl-C
-    server.serve_forever()
+        # Activate the server; this will keep running until you
+        # interrupt the program with Ctrl-C
+        server.serve_forever()
