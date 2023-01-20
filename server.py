@@ -43,9 +43,9 @@ class MyWebServer(socketserver.BaseRequestHandler):
                 method, path = s_data[0], s_data[1]
             
             if method != 'GET':
-                header = 'HTTP/1.1 405 Method Not Allowed\n'
+                header = 'HTTP/1.1 405 Method Not Allowed\r\n'
             else: 
-                header = 'HTTP/1.1 200 OK\n'
+                header = 'HTTP/1.1 200 OK\r\n'
 
             root = 'www'
             r = ''
@@ -54,27 +54,27 @@ class MyWebServer(socketserver.BaseRequestHandler):
                 path = '/index.html'
             
             if not path.endswith('/') and not path.endswith('.css') and not path.endswith('.html'):
-                header = 'HTTP/1.1 301 Moved Permanently'
-                r = header + '\nLocation: ' + path + '/'
+                header = 'HTTP/1.1 301 Moved Permanently\r\n'
+                r = header + 'Location: ' + path + '/' + '\r\n'
             else:            
                 f = open(root + path)
                 contents = f.read()
                 f.close() 
 
                 if path.endswith('.css'):
-                    r = header + 'Content-Type: text/css\n\n' + contents
+                    r = header + 'Content-Type: text/css\r\n' + contents + '\r\n'
                 elif path.endswith('.html'):
-                    r = header + 'Content-Type: text/html\n\n' + contents
+                    r = header + 'Content-Type: text/html\r\n' + contents + '\r\n'
         except IsADirectoryError:
             if os.path.isfile(root + path + 'index.html'):
                 f = open(root + path + 'index.html')
                 contents = f.read()
                 f.close()
-                r = header + 'Content-Type: text/html\n\n' + contents
+                r = header + 'Content-Type: text/html\r\n' + contents + '\r\n'
             else:
-                r = 'HTTP/1.1 404 NOT FOUND\n\nI do not know what you were trying to show, but it does not exist.'
+                r = 'HTTP/1.1 404 NOT FOUND\r\nI do not know what you were trying to show, but it does not exist.\r\n'
         except FileNotFoundError: 
-            r = 'HTTP/1.1 404 NOT FOUND\n\nI do not know what you were trying to show, but it does not exist.'
+            r = 'HTTP/1.1 404 NOT FOUND\r\nI do not know what you were trying to show, but it does not exist.\r\n'
         finally: 
             self.request.sendall(r.encode('utf-8'))
             self.request.close()
